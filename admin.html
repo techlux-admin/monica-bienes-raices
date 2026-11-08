@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM - Mónica Bienes Raíces</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Script Oficial Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; overflow: hidden; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .cal-day { cursor: pointer; transition: all 0.2s; position: relative; border: 2px solid transparent; }
+        .cal-day:hover { background-color: #e0e7ff; border-radius: 9999px; color: #4f46e5; }
+        .cal-active { background-color: #e0e7ff !important; border-color: #4f46e5; color: #4f46e5 !important; border-radius: 9999px; font-weight: bold; }
+        .drawer-slide { transition: transform 0.3s ease-in-out; }
+        .drawer-open { transform: translateX(0); }
+        .drawer-closed { transform: translateX(100%); }
+    </style>
+</head>
+<body class="text-slate-800 flex h-screen">
+
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between hidden md:flex z-20">
+        <div>
+            <div class="h-16 flex items-center px-6 border-b border-slate-200">
+                <i class="fa-solid fa-house-chimney text-indigo-600 text-xl mr-3"></i>
+                <span class="font-bold text-lg text-slate-800">Mónica CRM</span>
+            </div>
+            <nav class="p-4 space-y-1">
+                <button onclick="changeTab('dashboard')" id="btn-dashboard" class="w-full flex items-center space-x-3 px-4 py-2.5 bg-indigo-50 text-indigo-700 rounded-lg font-medium transition-colors"><i class="fa-solid fa-chart-pie w-5"></i><span>Dashboard</span></button>
+                <button onclick="changeTab('embudo')" id="btn-embudo" class="w-full flex items-center space-x-3 px-4 py-2.5 text-slate-600 hover:bg-slate-50 rounded-lg font-medium transition-colors"><i class="fa-solid fa-filter w-5"></i><span>Embudo de Ventas</span></button>
+                <button onclick="changeTab('agenda')" id="btn-agenda" class="w-full flex items-center space-x-3 px-4 py-2.5 text-slate-600 hover:bg-slate-50 rounded-lg font-medium transition-colors"><i class="fa-solid fa-calendar-days w-5"></i><span>Agenda de Citas</span></button>
+                <button onclick="changeTab('propiedades')" id="btn-propiedades" class="w-full flex items-center space-x-3 px-4 py-2.5 text-slate-600 hover:bg-slate-50 rounded-lg font-medium transition-colors"><i class="fa-solid fa-building w-5"></i><span>Propiedades</span></button>
+                <button onclick="changeTab('ajustes')" id="btn-ajustes" class="w-full flex items-center space-x-3 px-4 py-2.5 text-slate-600 hover:bg-slate-50 rounded-lg font-medium transition-colors"><i class="fa-solid fa-gear w-5"></i><span>Ajustes de Web</span></button>
+            </nav>
+        </div>
+        <div class="p-4 border-t border-slate-200">
+            <a href="login.html" class="w-full mt-2 flex items-center space-x-2 px-4 py-2 text-red-500 hover:bg-red-50 rounded-lg font-medium transition-colors text-sm"><i class="fa-solid fa-arrow-right-from-bracket"></i><span>Cerrar Sesión</span></a>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-full relative">
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center px-6 z-10 shrink-0">
+            <h1 id="topbar-title" class="font-bold text-xl text-slate-800">Dashboard General</h1>
+            <span id="cloud-status" class="ml-auto text-xs font-bold text-emerald-500"><i class="fa-solid fa-cloud mr-1"></i>Conectado a la nube</span>
+        </header>
+
+        <div class="flex-1 overflow-auto p-6 relative">
+            
+            <div id="view-dashboard" class="block space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div><p class="text-sm font-medium text-slate-500">Nuevos Leads</p><p id="dash-leads" class="text-2xl font-bold text-slate-800">0</p></div>
+                        <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500"><i class="fa-solid fa-users"></i></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div><p class="text-sm font-medium text-slate-500">Citas Pendientes</p><p id="dash-citas" class="text-2xl font-bold text-slate-800">0</p></div>
+                        <div class="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center text-purple-500"><i class="fa-solid fa-calendar-check"></i></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div><p class="text-sm font-medium text-slate-500">Propiedades Activas</p><p id="dash-props" class="text-2xl font-bold text-slate-800">0</p></div>
+                        <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500"><i class="fa-solid fa-house-flag"></i></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div><p class="text-sm font-medium text-slate-500">Ventas Cerradas</p><p id="dash-cierres" class="text-2xl font-bold text-slate-800">0</p></div>
+                        <div class="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-500"><i class="fa-solid fa-handshake"></i></div>
+                    </div>
+                </div>
+                <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+                    <h2 class="text-lg font-bold text-slate-800 mb-4">Actividad Reciente en la Nube</h2>
+                    <ul class="space-y-4" id="actividad-reciente"></ul>
+                </div>
+            </div>
+
+            <div id="view-embudo" class="hidden h-full flex flex-col">
+                <div class="flex space-x-4 overflow-x-auto h-full pb-4" id="embudo-container"></div>
+            </div>
+
+            <div id="drawer-cliente" class="fixed inset-y-0 right-0 w-96 bg-white shadow-2xl z-50 drawer-closed flex flex-col border-l border-slate-200">
+                <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                    <h3 class="font-bold text-slate-800">Detalles de la Cita</h3>
+                    <button onclick="cerrarDrawerCliente()" class="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 flex items-center justify-center text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="flex-1 overflow-y-auto p-6">
+                    <h4 id="drawer-nombre" class="text-2xl font-bold text-indigo-700 mb-1">Nombre Cliente</h4>
+                    <p id="drawer-fecha" class="text-sm text-slate-500 mb-2"><i class="fa-regular fa-calendar mr-1"></i> Fecha</p>
+                    <p id="drawer-hora" class="text-sm text-slate-500 mb-6"><i class="fa-regular fa-clock mr-1"></i> Hora</p>
+                    <div class="bg-slate-100 p-4 rounded-xl border border-slate-200 mb-6">
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Inmueble de Interés</p>
+                        <h5 id="drawer-casa" class="font-bold text-slate-800 text-md">Nombre Casa</h5>
+                    </div>
+                    <a id="drawer-wa" href="#" target="_blank" class="w-full bg-[#25D366] text-white font-bold py-3 rounded-xl flex items-center justify-center space-x-2 shadow hover:bg-[#20b958] transition">
+                        <i class="fa-brands fa-whatsapp text-xl"></i> <span>Abrir Chat en WhatsApp</span>
+                    </a>
+                </div>
+            </div>
+
+            <div id="view-agenda" class="hidden h-full">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-slate-800">Calendario de Visitas</h2>
+                    <button onclick="abrirModalCitaManual()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center space-x-2">
+                        <i class="fa-solid fa-plus"></i><span>Agregar Cita Manual</span>
+                    </button>
+                </div>
+                <div class="flex flex-col lg:flex-row h-[calc(100%-60px)] bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                    <div class="w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r border-slate-200 p-6 flex flex-col bg-slate-50 shrink-0">
+                        <h3 class="font-bold text-lg mb-4 text-slate-800">Noviembre 2026</h3>
+                        <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-slate-500 mb-2">
+                            <div>DO</div><div>LU</div><div>MA</div><div>MI</div><div>JU</div><div>VI</div><div>SA</div>
+                        </div>
+                        <div class="grid grid-cols-7 gap-2 text-center text-sm font-medium" id="calendar-grid"></div>
+                        <div class="mt-6 border-t border-slate-200 pt-4">
+                            <p class="text-xs font-bold text-slate-400 mb-2 uppercase">Leyenda</p>
+                            <div class="flex items-center text-xs text-slate-600"><div class="w-2 h-2 rounded-full bg-purple-500 mr-2"></div> Cita por Web</div>
+                            <div class="flex items-center text-xs text-slate-600 mt-1"><div class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></div> Cita Manual</div>
+                        </div>
+                    </div>
+                    
+                    <div class="w-full lg:w-2/3 p-0 relative overflow-y-auto" style="height: 600px;">
+                        <div class="px-6 py-4 border-b border-slate-100 sticky top-0 bg-white z-10">
+                            <h3 id="timeline-title" class="font-bold text-slate-800">Selecciona un día</h3>
+                        </div>
+                        <div class="relative pt-4 pb-10 px-6" id="timeline-container">
+                            <div class="relative h-[60px] border-t border-slate-100"><span class="absolute -top-3 left-0 text-xs text-slate-400 bg-white pr-2">10:00</span></div>
+                            <div class="relative h-[60px] border-t border-slate-100"><span class="absolute -top-3 left-0 text-xs text-slate-400 bg-white pr-2">11:00</span></div>
+                            <div class="relative h-[60px] border-t border-slate-100"><span class="absolute -top-3 left-0 text-xs text-slate-400 bg-white pr-2">12:00</span></div>
+                            <div class="relative h-[60px] border-t border-slate-100"><span class="absolute -top-3 left-0 text-xs text-slate-400 bg-white pr-2">13:00</span></div>
+                            <div class="relative h-[60px] border-t border-slate-100"><span class="absolute -top-3 left-0 text-xs text-slate-400 bg-white pr-2">14:00</span></div>
+                            <div class="relative h-[60px] border-t border-slate-100"><span class="absolute -top-3 left-0 text-xs text-slate-400 bg-white pr-2">15:00</span></div>
+                            <div class="relative h-[60px] border-t border-slate-100"><span class="absolute -top-3 left-0 text-xs text-slate-400 bg-white pr-2">16:00</span></div>
+                            <div class="relative h-[60px] border-t border-slate-100"><span class="absolute -top-3 left-0 text-xs text-slate-400 bg-white pr-2">17:00</span></div>
+                            <div id="dynamic-events"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-propiedades" class="hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <p class="text-slate-600">Gestiona tu catálogo de inmuebles en la nube.</p>
+                    <button onclick="abrirModalEdicion('nueva')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center space-x-2">
+                        <i class="fa-solid fa-plus"></i><span>Nueva Propiedad</span>
+                    </button>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500 font-semibold">
+                                <th class="py-4 px-6">Inmueble</th>
+                                <th class="py-4 px-6">Ubicación</th>
+                                <th class="py-4 px-6">Precio</th>
+                                <th class="py-4 px-6">Estado</th>
+                                <th class="py-4 px-6 text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm" id="tabla-propiedades"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="view-ajustes" class="hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Enlaces de Redes Sociales</h3>
+                        <p class="text-sm text-slate-600 mb-4">Se guardan localmente para este navegador.</p>
+                        <div class="space-y-4">
+                            <div><label class="block text-sm font-medium text-slate-700 mb-1"><i class="fa-brands fa-instagram text-pink-600"></i> Instagram</label><input type="text" id="link-ig" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none"></div>
+                            <div><label class="block text-sm font-medium text-slate-700 mb-1"><i class="fa-brands fa-facebook text-blue-600"></i> Facebook</label><input type="text" id="link-fb" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none"></div>
+                            <div><label class="block text-sm font-medium text-slate-700 mb-1"><i class="fa-brands fa-tiktok text-black"></i> TikTok</label><input type="text" id="link-tk" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none"></div>
+                            <div><label class="block text-sm font-medium text-slate-700 mb-1"><i class="fa-brands fa-whatsapp text-emerald-500"></i> WhatsApp</label><input type="text" id="link-wa" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none"></div>
+                            <button onclick="guardarRedes()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full mt-2 shadow">Guardar Localmente</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL EDICIÓN PROPIEDAD -->
+            <div id="modal-edicion" class="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+                <div class="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl relative max-h-[90vh] overflow-y-auto">
+                    <div class="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50 sticky top-0 z-10">
+                        <h3 id="modal-edit-title" class="font-bold text-lg text-slate-800">Editar Propiedad</h3>
+                        <button onclick="cerrarModalEdicion()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                    </div>
+                    <form onsubmit="guardarPropiedadNube(event)" class="p-6 space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-semibold text-slate-700 mb-1">Nombre Inmueble</label><input type="text" id="edit-nombre" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-indigo-500 focus:outline-none"></div>
+                            <div><label class="block text-sm font-semibold text-slate-700 mb-1">Precio (Ej: 150000)</label><input type="number" id="edit-precio" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-indigo-500 focus:outline-none"></div>
+                        </div>
+                        
+                        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                            <label class="block text-sm font-semibold text-slate-700 mb-1"><i class="fa-solid fa-images mr-1"></i> URLs de Fotografías (Una por línea)</label>
+                            <p class="text-[10px] text-slate-500 mb-2">La primera foto será la principal. Separa con la tecla Enter.</p>
+                            <textarea id="edit-img" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-indigo-500 focus:outline-none text-xs" rows="4"></textarea>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-semibold text-slate-700 mb-1">Ubicación Visual (Etiqueta)</label><input type="text" id="edit-ubi-label" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-indigo-500 focus:outline-none"></div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Zona del Buscador</label>
+                                <select id="edit-ubi-val" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-indigo-500 bg-white">
+                                    <option value="via a la costa">Vía a la Costa</option><option value="samborondon">Samborondón</option>
+                                    <option value="norte">Norte de Guayaquil</option><option value="via salitre">Vía Salitre</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div><label class="block text-sm font-semibold text-slate-700 mb-1">Habitaciones</label><input type="number" id="edit-habs" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-indigo-500 focus:outline-none"></div>
+                            <div><label class="block text-sm font-semibold text-slate-700 mb-1">Baños</label><input type="number" step="0.5" id="edit-banos" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-indigo-500 focus:outline-none"></div>
+                            <div><label class="block text-sm font-semibold text-slate-700 mb-1">Metros m²</label><input type="number" id="edit-metros" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-indigo-500 focus:outline-none"></div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Tipo</label>
+                                <select id="edit-tipo" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-indigo-500 bg-white"><option value="casa">Casa/Villa</option><option value="departamento">Departamento</option></select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Estado en Catálogo</label>
+                                <select id="edit-estado" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-indigo-500 bg-white">
+                                    <option value="Disponible">Disponible (Visible)</option><option value="Preventa">Preventa (Visible)</option><option value="Vendido">Vendido (Oculto)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Descripción para Detalles</label>
+                            <textarea id="edit-desc" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-indigo-500 focus:outline-none" rows="2" required></textarea>
+                        </div>
+                        <input type="hidden" id="edit-id">
+                        <button type="submit" id="btn-save-prop" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-colors mt-4">Guardar en Supabase</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- MODAL CITA MANUAL -->
+            <div id="modal-cita" class="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+                <div class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl relative">
+                    <div class="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                        <h3 class="font-bold text-lg text-slate-800">Agendar Cita Manual</h3>
+                        <button onclick="cerrarModalCitaManual()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                    </div>
+                    <form onsubmit="guardarCitaManualNube(event)" class="p-6 space-y-4">
+                        <div><label class="block text-sm font-semibold text-slate-700 mb-1">Nombre del Cliente</label><input type="text" id="cita-nombre" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-indigo-500"></div>
+                        <div><label class="block text-sm font-semibold text-slate-700 mb-1">Teléfono</label><input type="text" id="cita-tel" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-indigo-500"></div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Inmueble de Interés</label>
+                            <select id="cita-inmueble" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-indigo-500 bg-white"></select>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-semibold text-slate-700 mb-1">Fecha</label><input type="date" id="cita-fecha" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-indigo-500" onchange="actualizarHorasDisponibles()"></div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Hora</label>
+                                <select id="cita-hora" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:border-indigo-500 bg-white">
+                                    <option value="" disabled selected>Elija hora</option>
+                                    <option value="10:00">10:00 AM</option><option value="11:00">11:00 AM</option><option value="12:00">12:00 PM</option><option value="13:00">01:00 PM</option>
+                                    <option value="14:00">02:00 PM</option><option value="15:00">03:00 PM</option><option value="16:00">04:00 PM</option><option value="17:00">05:00 PM</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" id="btn-save-cita" class="w-full bg-[#25D366] hover:bg-[#20b958] text-white font-bold py-3 rounded-xl transition-colors mt-4">Guardar en Supabase</button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        const { createClient } = supabase;
+        const supabaseUrl = 'https://fknwjsladjepjudkylsg.supabase.co';
+        const supabaseKey = 'sb_publishable_utDxLo0cbWS8jerFzmb82A_280EbxyX';
+        const clientDB = createClient(supabaseUrl, supabaseKey);
+
+        let propiedades = [];
+        let citas = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('link-ig').value = localStorage.getItem('crm_ig') || '';
+            document.getElementById('link-fb').value = localStorage.getItem('crm_fb') || '';
+            document.getElementById('link-tk').value = localStorage.getItem('crm_tk') || '';
+            document.getElementById('link-wa').value = localStorage.getItem('crm_wa') || '593999999999';
+            
+            cargarDatosSupabase();
+        });
+
+        async function cargarDatosSupabase() {
+            const { data: props } = await clientDB.from('propiedades').select('*');
+            if (props) propiedades = props;
+
+            const { data: cts } = await clientDB.from('citas').select('*');
+            if (cts) citas = cts;
+
+            renderizarPropiedades(); renderizarEmbudo(); renderizarCalendario(); actualizarDashboard();
+        }
+
+        function changeTab(tabId) {
+            ['view-dashboard', 'view-embudo', 'view-agenda', 'view-propiedades', 'view-ajustes'].forEach(v => document.getElementById(v).classList.add('hidden'));
+            ['btn-dashboard', 'btn-embudo', 'btn-agenda', 'btn-propiedades', 'btn-ajustes'].forEach(b => {
+                document.getElementById(b).classList.remove('bg-indigo-50', 'text-indigo-700'); document.getElementById(b).classList.add('text-slate-600', 'hover:bg-slate-50');
+            });
+            document.getElementById('view-' + tabId).classList.remove('hidden'); document.getElementById('btn-' + tabId).classList.add('bg-indigo-50', 'text-indigo-700');
+            document.getElementById('topbar-title').innerText = { 'dashboard': 'Dashboard General', 'embudo': 'Embudo de Ventas (Leads)', 'agenda': 'Agenda de Citas', 'propiedades': 'Inventario de Propiedades', 'ajustes': 'Ajustes de Plataforma' }[tabId];
+        }
+
+        function renderizarPropiedades() {
+            const tbody = document.getElementById('tabla-propiedades'); tbody.innerHTML = '';
+            propiedades.forEach(p => {
+                let badgeClass = p.estado === 'Vendido' ? 'bg-red-100 text-red-700' : (p.estado === 'Preventa' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700');
+                let fotito = (p.img && p.img.length > 0) ? p.img[0] : 'https://via.placeholder.com/400';
+                tbody.innerHTML += `
+                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer" onclick="abrirModalEdicion('${p.id}')">
+                        <td class="py-3 px-6 flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-slate-200 rounded-lg bg-cover bg-center" style="background-image: url('${fotito}');"></div>
+                            <div><p class="font-bold text-slate-800">${p.titulo}</p><p class="text-xs text-slate-500">${p.habs} Hab • ${p.banos} Baños</p></div>
+                        </td>
+                        <td class="py-3 px-6 text-slate-600">${p.ubi_label}</td>
+                        <td class="py-3 px-6 font-semibold text-slate-800">$${Number(p.precio).toLocaleString()}</td>
+                        <td class="py-3 px-6"><span class="px-2 py-1 rounded-full text-xs font-semibold ${badgeClass}">${p.estado}</span></td>
+                        <td class="py-3 px-6 text-right space-x-2">
+                            <button class="text-blue-500 hover:text-blue-700 px-2 py-1"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="event.stopPropagation(); eliminarPropiedadNube('${p.id}')" class="text-red-500 hover:text-red-700 px-2 py-1"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>`;
+            });
+        }
+
+        async function eliminarPropiedadNube(id) {
+            if(confirm('¿Seguro que deseas ELIMINAR permanentemente esta propiedad de Supabase?')) {
+                const { error } = await clientDB.from('propiedades').delete().eq('id', id);
+                if(error) alert("Error al eliminar.");
+                else { alert("Propiedad eliminada."); await cargarDatosSupabase(); }
+            }
+        }
+
+        function abrirModalEdicion(id) {
+            document.getElementById('edit-id').value = id;
+            if(id === 'nueva') {
+                document.getElementById('modal-edit-title').innerText = "Nueva Propiedad";
+                document.getElementById('edit-nombre').value = ""; document.getElementById('edit-precio').value = ""; document.getElementById('edit-img').value = "";
+                document.getElementById('edit-ubi-label').value = ""; document.getElementById('edit-habs').value = ""; document.getElementById('edit-banos').value = "";
+                document.getElementById('edit-metros').value = ""; document.getElementById('edit-desc').value = ""; document.getElementById('edit-estado').value = "Disponible";
+            } else {
+                const p = propiedades.find(x => x.id === id);
+                document.getElementById('modal-edit-title').innerText = "Editar: " + p.titulo;
+                document.getElementById('edit-nombre').value = p.titulo; document.getElementById('edit-precio').value = p.precio; 
+                document.getElementById('edit-img').value = p.img ? p.img.join('\n') : '';
+                document.getElementById('edit-ubi-label').value = p.ubi_label; document.getElementById('edit-ubi-val').value = p.ubicacion; document.getElementById('edit-tipo').value = p.tipo;
+                document.getElementById('edit-habs').value = p.habs; document.getElementById('edit-banos').value = p.banos; document.getElementById('edit-metros').value = p.metros;
+                document.getElementById('edit-estado').value = p.estado; document.getElementById('edit-desc').value = p.desc;
+            }
+            document.getElementById('modal-edicion').classList.replace('hidden', 'flex');
+        }
+
+        function cerrarModalEdicion() { document.getElementById('modal-edicion').classList.replace('flex', 'hidden'); }
+
+        async function guardarPropiedadNube(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-save-prop');
+            btn.innerText = "Guardando en Supabase...";
+            
+            const id = document.getElementById('edit-id').value;
+            let lineasImg = document.getElementById('edit-img').value.split('\n').map(l => l.trim()).filter(l => l !== '');
+            if(lineasImg.length === 0) lineasImg = ['https://via.placeholder.com/400'];
+
+            const nuevaProp = {
+                id: id === 'nueva' ? 'prop_' + Date.now() : id,
+                titulo: document.getElementById('edit-nombre').value,
+                precio: Number(document.getElementById('edit-precio').value),
+                img: lineasImg,
+                ubi_label: document.getElementById('edit-ubi-label').value,
+                ubicacion: document.getElementById('edit-ubi-val').value,
+                tipo: document.getElementById('edit-tipo').value,
+                habs: Number(document.getElementById('edit-habs').value),
+                banos: Number(document.getElementById('edit-banos').value),
+                metros: Number(document.getElementById('edit-metros').value),
+                estado: document.getElementById('edit-estado').value,
+                desc: document.getElementById('edit-desc').value
+            };
+            
+            const { error } = await clientDB.from('propiedades').upsert([nuevaProp]);
+            btn.innerText = "Guardar en Supabase";
+
+            if(error) { alert("Error al conectar con Supabase: " + error.message); }
+            else { alert("Guardado en la NUBE exitosamente."); cerrarModalEdicion(); await cargarDatosSupabase(); }
+        }
+
+        function renderizarCalendario() {
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '<div class="text-slate-300 p-2">1</div><div class="text-slate-300 p-2">2</div>'; 
+            for(let i=3; i<=30; i++) {
+                let fechaStr = `2026-11-${i.toString().padStart(2, '0')}`;
+                let citasDelDia = citas.filter(c => c.fecha === fechaStr);
+                let dotHTML = '';
+                if(citasDelDia.length > 0) {
+                    let tieneWeb = citasDelDia.some(c => c.tipo === 'web');
+                    let tieneManual = citasDelDia.some(c => c.tipo === 'manual');
+                    dotHTML += '<div class="flex justify-center mt-0.5 space-x-1">';
+                    if(tieneWeb) dotHTML += '<div class="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>';
+                    if(tieneManual) dotHTML += '<div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>';
+                    dotHTML += '</div>';
+                }
+                grid.innerHTML += `<div class="cal-day p-2" onclick="selectDay(this, ${i}, '${fechaStr}')">${i}${dotHTML}</div>`;
+            }
+        }
+
+        function selectDay(element, dayNumber, fechaStr) {
+            document.querySelectorAll('.cal-day').forEach(d => d.classList.remove('cal-active'));
+            element.classList.add('cal-active');
+            
+            document.getElementById('timeline-title').innerText = `Noviembre ${dayNumber}, 2026`;
+            const container = document.getElementById('dynamic-events');
+            container.innerHTML = '';
+
+            let citasDelDia = citas.filter(c => c.fecha === fechaStr);
+            if(citasDelDia.length === 0) {
+                container.innerHTML = '<p class="text-sm text-slate-400 mt-8 text-center italic">No hay citas para este día.</p>';
+            } else {
+                citasDelDia.forEach(cita => {
+                    let horaNum = parseInt(cita.hora.split(':')[0]);
+                    let topPx = (horaNum - 10) * 60 + 16;
+                    let bg = (cita.tipo === 'manual') ? 'bg-emerald-50 border-emerald-500 text-emerald-800' : 'bg-purple-50 border-purple-500 text-purple-800';
+                    let txt = (cita.tipo === 'manual') ? 'text-emerald-600' : 'text-purple-600';
+                    let lbl = (cita.tipo === 'manual') ? 'Cita Manual' : 'Cita Web';
+                    
+                    container.innerHTML += `
+                        <div class="absolute left-[60px] right-6 border-l-4 rounded p-2 shadow-sm ${bg}" style="top: ${topPx}px; height: 58px;">
+                            <p class="text-xs font-bold">${lbl}: ${cita.casa}</p>
+                            <p class="text-xs ${txt}">${cita.nombre} - ${cita.hora}</p>
+                        </div>`;
+                });
+            }
+        }
+
+        function abrirModalCitaManual() {
+            const select = document.getElementById('cita-inmueble');
+            select.innerHTML = '<option value="" disabled selected>Elija un inmueble...</option>';
+            propiedades.filter(p => p.estado !== 'Vendido').forEach(p => {
+                select.innerHTML += `<option value="${p.titulo}">${p.titulo}</option>`;
+            });
+            document.getElementById('cita-fecha').value = ''; document.getElementById('cita-hora').value = '';
+            document.getElementById('modal-cita').classList.replace('hidden', 'flex');
+        }
+        function cerrarModalCitaManual() { document.getElementById('modal-cita').classList.replace('flex', 'hidden'); }
+        
+        function actualizarHorasDisponibles() {
+            const fechaSelec = document.getElementById('cita-fecha').value;
+            const selectHora = document.getElementById('cita-hora');
+            Array.from(selectHora.options).forEach(opt => { opt.disabled = false; opt.text = opt.text.replace(' (Ocupado)', ''); });
+            let ocupadas = citas.filter(c => c.fecha === fechaSelec).map(c => c.hora);
+            Array.from(selectHora.options).forEach(opt => {
+                if(ocupadas.includes(opt.value)) { opt.disabled = true; opt.text = opt.text + " (Ocupado)"; }
+            });
+        }
+
+        async function guardarCitaManualNube(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-save-cita');
+            btn.innerText = "Guardando en Supabase...";
+
+            const nuevaCita = {
+                id: 'c_' + Date.now(),
+                nombre: document.getElementById('cita-nombre').value, tel: document.getElementById('cita-tel').value,
+                casa: document.getElementById('cita-inmueble').value, fecha: document.getElementById('cita-fecha').value,
+                hora: document.getElementById('cita-hora').value, tipo: 'manual'
+            };
+
+            const { error } = await clientDB.from('citas').insert([nuevaCita]);
+            btn.innerText = "Guardar en Supabase";
+
+            if(error) { alert("Error de conexión: " + error.message); }
+            else {
+                alert("Cita manual subida a la nube exitosamente.");
+                cerrarModalCitaManual(); await cargarDatosSupabase();
+            }
+        }
+
+        function actualizarDashboard() {
+            document.getElementById('dash-leads').innerText = citas.length;
+            document.getElementById('dash-citas').innerText = citas.length;
+            document.getElementById('dash-props').innerText = propiedades.filter(p=>p.estado !== 'Vendido').length;
+            document.getElementById('dash-cierres').innerText = propiedades.filter(p=>p.estado === 'Vendido').length;
+            
+            const list = document.getElementById('actividad-reciente'); list.innerHTML = '';
+            citas.slice().reverse().slice(0, 3).forEach(c => {
+                let color = c.tipo === 'manual' ? 'bg-emerald-500' : 'bg-purple-500';
+                list.innerHTML += `<li class="flex items-start space-x-3"><div class="w-2 h-2 mt-2 rounded-full ${color}"></div><div><p class="text-sm font-medium text-slate-800">Cita: ${c.nombre}</p><p class="text-xs text-slate-500">Para el ${c.fecha} a las ${c.hora}</p></div></li>`;
+            });
+        }
+
+        function renderizarEmbudo() {
+            const contenedor = document.getElementById('embudo-container');
+            contenedor.innerHTML = `
+                <div class="min-w-[300px] w-[300px] bg-slate-100 rounded-xl p-3 flex flex-col h-full shrink-0">
+                    <div class="border-t-4 border-blue-400 mb-2"></div>
+                    <h3 class="font-bold text-slate-700 flex justify-between">Citas en la Nube <span class="bg-slate-200 text-slate-600 px-2 py-0.5 rounded text-xs">${citas.length}</span></h3>
+                    <div class="mt-3 flex-1 overflow-y-auto space-y-3" id="col-citas"></div>
+                </div>`;
+            const col = document.getElementById('col-citas');
+            citas.forEach(c => {
+                const numWa = localStorage.getItem('crm_wa') || '593999999999';
+                let tagColor = c.tipo === 'manual' ? 'bg-emerald-50 text-emerald-600' : 'bg-purple-50 text-purple-600';
+                let tagText = c.tipo === 'manual' ? 'Cita Manual' : 'Cita Web';
+                col.innerHTML += `
+                    <div onclick="abrirDrawerCliente('${c.nombre}', '${c.tel}', '${c.casa}', '${c.fecha}', '${c.hora}')" class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 cursor-pointer hover:border-indigo-400 transition-all">
+                        <span class="text-xs font-semibold px-2 py-1 rounded inline-block mb-2 ${tagColor}">${tagText}</span>
+                        <h4 class="font-bold text-sm">${c.nombre}</h4>
+                        <p class="text-xs text-slate-500 mb-3"><i class="fa-regular fa-clock mr-1"></i>${c.fecha} - ${c.hora}</p>
+                        <a href="https://wa.me/${numWa}?text=Hola%20${c.nombre}" target="_blank" onclick="event.stopPropagation();" class="w-full bg-[#25D366] text-white text-xs font-bold py-1.5 rounded flex items-center justify-center space-x-1 hover:bg-[#20b958]">
+                            <i class="fa-brands fa-whatsapp"></i> <span>Contactar</span>
+                        </a>
+                    </div>`;
+            });
+        }
+        function abrirDrawerCliente(nom, tel, casa, fecha, hora) {
+            document.getElementById('drawer-nombre').innerText = nom; document.getElementById('drawer-fecha').innerHTML = `<i class="fa-regular fa-calendar mr-1"></i> ${fecha}`;
+            document.getElementById('drawer-hora').innerHTML = `<i class="fa-regular fa-clock mr-1"></i> ${hora}`; document.getElementById('drawer-casa').innerText = casa;
+            document.getElementById('drawer-wa').href = `https://wa.me/${tel}`;
+            document.getElementById('drawer-cliente').classList.replace('drawer-closed', 'drawer-open');
+        }
+        function cerrarDrawerCliente() { document.getElementById('drawer-cliente').classList.replace('drawer-open', 'drawer-closed'); }
+        function guardarRedes() { localStorage.setItem('crm_ig', document.getElementById('link-ig').value); localStorage.setItem('crm_fb', document.getElementById('link-fb').value); localStorage.setItem('crm_tk', document.getElementById('link-tk').value); localStorage.setItem('crm_wa', document.getElementById('link-wa').value); alert('¡Redes Sociales guardadas localmente!'); }
+    </script>
+</body>
+</html>
